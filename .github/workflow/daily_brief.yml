@@ -1,0 +1,35 @@
+name: Daily Market Intelligence Agent
+
+on:
+  schedule:
+    # UTC 21:30 (美股收盘后，对应悉尼时间 AEDT 08:30 / 北京时间 05:30)
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch: # 允许在 GitHub 页面手动一键触发测试
+
+jobs:
+  run-market-agent:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: 1. 检出仓库代码
+        uses: actions/checkout@v4
+
+      - name: 2. 配置 Python 3.11 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 3. 安装依赖库
+        run: pip install -r requirements.txt
+
+      - name: 4. 运行投研 Agent 并生成报告
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
+        run: python main.py

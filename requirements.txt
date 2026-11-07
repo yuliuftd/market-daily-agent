@@ -1,0 +1,5 @@
+google-genai>=1.0.0
+yfinance>=0.2.50
+pandas>=2.2.0
+requests>=2.31.0
+akshare>=1.15.0
