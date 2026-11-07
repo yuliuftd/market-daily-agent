@@ -77,16 +77,16 @@ def fetch_yf_metrics(tickers_dict: dict) -> str:
 # ==================== 3. System Prompt 与 AI 投研推理 ====================
 SYSTEM_PROMPT = """
 # Role
-你是一位兼具华尔街宏观视野与产业基本面深度的买方首席投资官（CIO）兼量化风控专家。请基于我提供的【量化行情快照】并通过你的 Google Search 工具实时检索最新宏观估值与个股公告，生成一份直接指导实战的《每日市场温度与持仓复盘报告》。
+你是一位兼具华尔街宏观视野与产业基本面深度的买方首席投资官（CIO）兼量化风控专家。请基于我提供的【量化行情快照】并结合最新宏观估值与个股公告，生成一份直接指导实战的《每日市场温度与持仓复盘报告》。
 
 # Core Analytical Framework
 1. **穿透指数分子与分母**：
-   - 通过搜索获取最新 **纳指100 / 标普500 的 Forward PE（如 MacroMicro 数据）与 TTM PE（Multpl / GuruFocus 数据）**。
+   - 获取最新 **纳指100 / 标普500 的 Forward PE（如 MacroMicro 数据）与 TTM PE（Multpl / GuruFocus 数据）**。
    - 结合输入中的 10年期美债收益率（^TNX），计算并展示 **隐含股权风险溢价 ERP = (1 / Forward PE) - 10Y美债收益率**，判断美股处于“杀估值”还是“杀业绩预期”。
 2. **A股/港股紧盯筹码与平准基金动向**：
-   - 结合 510300(沪深300ETF) 和 588000(科创50ETF) 的放量情况及最新搜索到的A股两市成交额、ETF份额净申赎、两融余额变化，判断“国家队（汇金/国新）”是在逆向抽水还是托底回补。
+   - 结合 510300(沪深300ETF) 和 588000(科创50ETF) 的放量情况及A股两市成交额、ETF份额净申赎、两融余额变化，判断“国家队（汇金/国新）”是在逆向抽水还是托底回补。
 3. **持仓股敏感事件定性**：
-   - 联网检索自选股过去 24-48 小时内的最新 SEC 文件、港交所/上交所公告（如长城汽车最新H股回购记录、微创系停复牌进展）、以及行业高频指标（如 VLCC TD3C 最新日租金 TCE）。
+   - 梳理自选股最新 SEC 文件、港交所/上交所公告（如长城汽车最新H股回购记录、微创系停复牌进展）、以及行业高频指标（如 VLCC TD3C 最新日租金 TCE）。
    - 对单日涨跌超 3% 或量比超 1.5x 的标的，明确判定属于：① 短期情绪/流动性错杀；② 核心基本面受损；③ 底部安全垫加固。
 4. **建议具体到价格区间与工具**：
    - 给出量化操作预案：左侧分批挂单区间、右侧加仓信号、或期权策略（如高IV且下方有铁底时卖出虚值 Cash-Secured Put 的具体行权价区间）。
@@ -98,6 +98,38 @@ SYSTEM_PROMPT = """
 ## 三、 行业高频景气度追踪 (VLCC油运运价 / 创新药审评 / 车企回购与销量)
 ## 四、 今日赔率测算与实战行动清单 (编号列出具体操作、价格区间与期权建议)
 """
+
+def discover_candidate_models(client: genai.Client) -> list:
+    """动态探测当前 API Key 可用的最新 Gemini 文本模型，并彻底过滤已下线的 1.5/2.0/2.5 旧模型"""
+    priority = [
+        "gemini-3.8-flash",
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-flash-preview",
+        "gemini-3.0-pro",
+        "gemini-3.0-flash"
+    ]
+    skip_keywords = ["1.5", "2.0", "2.5", "embedding", "imagen", "veo", "aqa", "audio", "tts", "vision", "learnlm"]
+    
+    discovered = []
+    try:
+        for m in client.models.list():
+            raw_name = getattr(m, "name", "")
+            short_name = raw_name.replace("models/", "")
+            if not short_name.startswith("gemini"):
+                continue
+            if any(k in short_name.lower() for k in skip_keywords):
+                continue
+            discovered.append(short_name)
+        print(f"API Key 在线探测到的新一代模型: {discovered}")
+    except Exception as e:
+        print(f"在线探测模型列表异常: {e}")
+
+    # 组合优先级列表：优先把官方点名的 3.8-flash 和 3.1-pro-preview 放最前，再追加探测到的其他 3.x 模型
+    final_list = []
+    for m in priority + discovered:
+        if m not in final_list:
+            final_list.append(m)
+    return final_list
 
 def generate_daily_report(api_key: str, macro_table: str, watchlist_table: str) -> str:
     client = genai.Client(api_key=api_key)
@@ -112,29 +144,23 @@ def generate_daily_report(api_key: str, macro_table: str, watchlist_table: str) 
 ### 2. 持仓与自选股监控池
 {watchlist_table}
 
-### 3. 强制联网检索任务 (请调用 Google Search 补齐以下最新实时数据)
-1. 检索 MacroMicro / Multpl 最新 Nasdaq 100 与 S&P 500 的 Forward PE、TTM PE，并结合上方 ^TNX 计算当前隐含 ERP。
-2. 检索昨日 A股全市场成交额、两融余额变动，以及宽基 ETF（沪深300、科创50）是否有大额净申赎。
-3. 检索 SMMT (Summit) 与 VOR (Vor Biopharma) 最近 48 小时的最新新闻、分析师评级或 SEC 公告。
-4. 检索 长城汽车(02333.HK) 最新披露的 H股回购记录，以及 中远海能 / 招商轮船 相关的最新 VLCC TD3C 日租金报价。
-5. 顺带检索 微创机器人-B (02252.HK) 是否有最新复牌或核数师审计进展公告。
+### 3. 检索与分析任务
+1. 结合 MacroMicro / Multpl 最新 Nasdaq 100 与 S&P 500 的 Forward PE、TTM PE，以及上方 ^TNX 计算当前隐含 ERP。
+2. 分析昨日 A股全市场成交额、两融余额变动，以及宽基 ETF（510300、588000）的量能与资金动向。
+3. 梳理 SMMT (Summit) 与 VOR (Vor Biopharma) 最新进展与催化剂窗口。
+4. 梳理 长城汽车(02333.HK) 最新H股回购支撑位，以及 中远海能 / 招商轮船 相关的 VLCC 油运景气度与赔率。
+5. 跟踪 微创机器人-B (02252.HK) 停复牌及审计进展。
 
 请严格按照 System Prompt 的分析框架输出今日深度复盘报告。
 """
 
-        # 按照官方指引更新为 Gemini 3 系列模型：
-    # 优先使用官方推荐的 3.1 Pro Preview，备选使用轻量高速的 3.1 Flash / 2.5 Flash
-    models_to_try = [
-        "gemini-3.1-pro-preview", 
-        "gemini-3.1-flash-preview", 
-        "gemini-2.5-flash"
-    ]
-
-    last_error = None
+    models_to_try = discover_candidate_models(client)
+    error_records = []
 
     for model_name in models_to_try:
+        # 阶段 A：优先尝试开启 Google Search 实时联网增强
         try:
-            print(f"正在尝试调用模型: {model_name} ...")
+            print(f"正在调用 {model_name} (开启 Google Search)...")
             response = client.models.generate_content(
                 model=model_name,
                 contents=user_prompt,
@@ -145,12 +171,31 @@ def generate_daily_report(api_key: str, macro_table: str, watchlist_table: str) 
                 )
             )
             if response and response.text:
-                return f"> 💡 *本报告由 `{model_name}` 结合 Google 实时搜索生成*\n\n" + response.text
-        except Exception as e:
-            print(f"模型 {model_name} 调用失败: {e}")
-            last_error = e
+                return f"> 💡 *本报告由 `{model_name}` (已启用 Google 实时联网检索) 生成*\n\n" + response.text
+        except Exception as e_search:
+            err_msg = str(e_search)
+            print(f"{model_name} (含搜索) 调用未通过: {err_msg}")
+            error_records.append(f"- `{model_name} [含搜索]`: {err_msg}")
 
-    raise RuntimeError(f"所有模型调用均失败，最后一次报错信息: {last_error}")
+            # 若错误并非 404 (说明模型存在，只是免费层不支持挂载搜索工具或搜索配额受限)，立即尝试不挂工具调用
+            if "404" not in err_msg and "NOT_FOUND" not in err_msg:
+                try:
+                    print(f"正在降级调用 {model_name} (纯量化数据模式)...")
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=user_prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                            temperature=0.2
+                        )
+                    )
+                    if response and response.text:
+                        return f"> 💡 *本报告由 `{model_name}` 基于实盘量化快照生成*\n\n" + response.text
+                except Exception as e_plain:
+                    error_records.append(f"- `{model_name} [纯量化]`: {str(e_plain)}")
+
+    all_errors_str = "\n".join(error_records)
+    raise RuntimeError(f"所有候选模型均未成功返回结果，逐项诊断如下:\n{all_errors_str}")
 
 # ==================== 4. 报告与诊断输出 ====================
 def write_summary(content_md: str):
@@ -189,9 +234,7 @@ if __name__ == "__main__":
     if not api_key:
         err_msg = (
             "## ❌ 运行失败：未检测到 `GEMINI_API_KEY`\n\n"
-            "请检查你的 GitHub 仓库配置：\n"
-            "1. 点击仓库顶部 **Settings** -> 左侧 **Secrets and variables** -> **Actions**。\n"
-            "2. 确保在下方的 **Repository secrets**（而不是 Environment secrets）中添加了名为 `GEMINI_API_KEY` 的密钥。"
+            "请检查 GitHub 仓库 **Settings -> Secrets and variables -> Actions -> Repository secrets**。"
         )
         print(err_msg)
         write_summary(err_msg)
@@ -202,7 +245,7 @@ if __name__ == "__main__":
         macro_md = fetch_yf_metrics(MACRO_TICKERS)
         watchlist_md = fetch_yf_metrics(WATCHLIST_TICKERS)
 
-        print("2. 正在调用 Gemini 进行实时联网检索与深度归因...")
+        print("2. 正在调用 Gemini 生成投研日报...")
         report = generate_daily_report(api_key, macro_md, watchlist_md)
 
         print("3. 正在写入报告并推送...")
@@ -214,7 +257,7 @@ if __name__ == "__main__":
         tb_str = traceback.format_exc()
         err_summary = (
             f"## ❌ 运行异常诊断 ({today_str})\n\n"
-            f"**核心错误原因**: `{str(e)}`\n\n"
+            f"{str(e)}\n\n"
             f"### 详细堆栈日志\n```python\n{tb_str}\n```\n\n"
             f"### 已成功抓取的行情快照备份\n{macro_md if 'macro_md' in locals() else '行情抓取阶段报错'}"
         )
