@@ -2,13 +2,15 @@ name: Daily Market Intelligence Agent
 
 on:
   schedule:
-    # UTC 21:30 (美股收盘后，对应悉尼时间 AEDT 08:30 / 北京时间 05:30)
     - cron: "30 21 * * 1-5"
-  workflow_dispatch: # 允许在 GitHub 页面手动一键触发测试
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   run-market-agent:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       issues: write
