@@ -1,0 +1,136 @@
+{
+  "a_shares": {
+    "000807.SZ": {
+      "name": "云铝股份",
+      "focus": "电解铝价格、云南水电铝成本优势与绿电溢价"
+    },
+    "600795.SS": {
+      "name": "国电电力",
+      "focus": "火电煤电联动利润、水电来水情况与高股息防御性"
+    },
+    "601225.SS": {
+      "name": "陕西煤业",
+      "focus": "动力煤坑口价、长协比例与高分红安全垫"
+    }
+  },
+  "hk_shares": {
+    "1378.HK": {
+      "name": "中国宏桥",
+      "focus": "电解铝/氧化铝全产业链利润率、高股息与港股回购"
+    },
+    "0981.HK": {
+      "name": "中芯国际",
+      "focus": "成熟制程稼动率、国产替代晶圆代工ASP与资本开支"
+    },
+    "1898.HK": {
+      "name": "中煤能源H",
+      "focus": "动力煤与煤化工景气度、AH高折价率与央企市值管理分红"
+    },
+    "1138.HK": {
+      "name": "中远海能H",
+      "focus": "VLCC TD3C运价、困船出湾Q4业绩释放与内贸/LNG底盘"
+    },
+    "1919.HK": {
+      "name": "中远海控H",
+      "focus": "SCFI集运指数、净现金储备利息保护与红利股息率"
+    },
+    "6881.HK": {
+      "name": "中国银河H",
+      "focus": "A股两融与日均成交额弹性、头部券商并购与估值修复"
+    },
+    "6990.HK": {
+      "name": "科伦博泰生物-B",
+      "focus": "芦康沙妥珠单抗(Trop2 ADC)商业化及默沙东海外临床里程碑"
+    },
+    "3396.HK": {
+      "name": "联想控股",
+      "focus": "深度破净PB估值修复、附属联营科技投资重估"
+    },
+    "0728.HK": {
+      "name": "中国电信H",
+      "focus": "天翼云算力收入增速、资本开支下降与派息率提升"
+    },
+    "0762.HK": {
+      "name": "中国联通H",
+      "focus": "算网数智业务、经营现金流与港股高股息配置价值"
+    },
+    "2252.HK": {
+      "name": "微创机器人-B",
+      "focus": "停复牌核数师审计进展、母公司对赌减持风险与图迈机器人放量"
+    },
+    "2333.HK": {
+      "name": "长城汽车H",
+      "focus": "6.2港元一线连续H股回购托底、海外补贴回款与坦克/魏牌销量"
+    }
+  },
+  "au_shares": {
+    "WDS.AX": {
+      "name": "Woodside Energy",
+      "focus": "布伦特油价与亚太LNG长约价格、Scarborough项目进展及高派息"
+    },
+    "TWE.AX": {
+      "name": "Treasury Wine (富邑)",
+      "focus": "奔富(Penfolds)中国市场动销恢复、美国高端酒业务与估值修复"
+    },
+    "YAL.AX": {
+      "name": "Yancoal (兖煤澳洲)",
+      "focus": "纽卡斯尔动力煤与焦煤价格、净现金头寸与中期/年度高分红"
+    },
+    "WHC.AX": {
+      "name": "Whitehaven Coal",
+      "focus": "BMA焦煤资产整合成效、澳洲煤炭出口量价与股东回报"
+    }
+  },
+  "us_shares": {
+    "COIN": {
+      "name": "Coinbase",
+      "focus": "BTC/加密市场交易量、稳定币USDC利息收入与监管政策催化"
+    },
+    "QQQ": {
+      "name": "纳指100 ETF",
+      "focus": "科技巨头Forward PE与隐含ERP、AI资本开支ROI及期权波动率"
+    },
+    "GOOGL": {
+      "name": "Alphabet (Google)",
+      "focus": "搜索与Cloud AI变现增速、反垄断裁决进展与处于科技巨头偏低位的估值"
+    },
+    "NVDA": {
+      "name": "NVIDIA (英伟达)",
+      "focus": "新一代AI芯片出货节奏、云大厂CapEx指引与毛利率维持情况"
+    },
+    "KO": {
+      "name": "Coca-Cola (可口可乐)",
+      "focus": "全球终端提价权、高利率环境下的消费必需品防御属性与股息率"
+    },
+    "PM": {
+      "name": "Philip Morris",
+      "focus": "无烟产品(IQOS/ZYN尼古丁袋)强劲增长、现金流与高股息安全垫"
+    },
+    "BTI": {
+      "name": "英美烟草 (BTI)",
+      "focus": "极低PE估值与超8%高股息率、新型烟草减亏及债务去化回购"
+    },
+    "SMMT": {
+      "name": "Summit Therapeutics",
+      "focus": "依沃西单抗FDA审评(PDUFA)、HARMONi-3一线肺癌PFS读出及阿斯利康$18.36成本底"
+    },
+    "VOR": {
+      "name": "Vor Biopharma",
+      "focus": "泰它西普全球III期(UPSTREAM MG/SjD)进展、4.8亿现金底与IgAN长周期数据"
+    },
+    "TRMD": {
+      "name": "TORM plc",
+      "focus": "MR/LR成品油轮日租金(TCE)、红海/中东绕行吨海里需求与超高季度分红"
+    }
+  },
+  "huijin_history_billion_rmb": [
+    { "period": "2022末", "value": 690 },
+    { "period": "2023末", "value": 1177 },
+    { "period": "2024H1", "value": 5839 },
+    { "period": "2024末", "value": 10439 },
+    { "period": "2025末", "value": 15263 },
+    { "period": "2026.05", "value": 1500 },
+    { "period": "2026Q3", "value": 4000 },
+    { "period": "2026.10", "value": 5700 }
+  ]
+}
