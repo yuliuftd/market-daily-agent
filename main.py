@@ -10,6 +10,12 @@ import yfinance as yf
 from google import genai
 from google.genai import types
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.header import Header
+import markdown
+
 HISTORY_FILE = "market_history.json"
 
 # ==================== 1. 加载自选股配置 ====================
@@ -485,8 +491,81 @@ def write_summary(content_md: str):
         with open(summary_path, "a", encoding="utf-8") as f:
             f.write(content_md + "\n")
 
+def send_email_report(report_md: str, today_str: str):
+    """将 Markdown 报告转换为带表格样式的 HTML 邮件并发送"""
+    sender = os.environ.get("EMAIL_SENDER", "").strip()
+    # 自动去除复制 Gmail 应用专用密码时可能带入的空格
+    password = os.environ.get("EMAIL_PASSWORD", "").replace(" ", "").strip()
+    receiver_raw = os.environ.get("EMAIL_RECEIVER", "").strip()
+
+    if not (sender and password and receiver_raw):
+        print("未配置完整的邮箱环境变量 (EMAIL_SENDER / EMAIL_PASSWORD / EMAIL_RECEIVER)，跳过邮件发送。")
+        return
+
+    receivers = [r.strip() for r in receiver_raw.split(",") if r.strip()]
+
+    # 根据发件箱后缀自动匹配 SMTP 服务器
+    domain = sender.split("@")[-1].lower()
+    smtp_map = {
+        "gmail.com": ("smtp.gmail.com", 465),
+        "qq.com": ("smtp.qq.com", 465),
+        "foxmail.com": ("smtp.qq.com", 465),
+        "163.com": ("smtp.163.com", 465),
+        "126.com": ("smtp.126.com", 465),
+    }
+    smtp_host, smtp_port = smtp_map.get(domain, ("smtp.gmail.com", 465))
+
+    # 将 Markdown 转换为 HTML（开启 tables 与 fenced_code 扩展）
+    html_body = markdown.markdown(report_md, extensions=["tables", "fenced_code"])
+
+    # 注入干净的投研研报级 CSS 样式，确保手机/电脑邮件客户端表格与图片完美自适应
+    styled_html = f"""
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1f2937; max-width: 920px; margin: 0 auto; padding: 16px; }}
+        h1, h2, h3, h4 {{ color: #111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-top: 24px; }}
+        table {{ border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 13px; }}
+        th, td {{ border: 1px solid #d1d5db; padding: 8px 10px; text-align: left; }}
+        th {{ background-color: #f3f4f6; font-weight: 600; }}
+        tr:nth-child(even) {{ background-color: #f9fafb; }}
+        img {{ max-width: 100%; height: auto; border-radius: 6px; margin: 10px 0; border: 1px solid #e5e7eb; }}
+        blockquote {{ border-left: 4px solid #3b82f6; background: #eff6ff; margin: 12px 0; padding: 8px 14px; color: #1e40af; }}
+        code {{ background: #f3f4f6; padding: 2px 5px; border-radius: 4px; font-size: 90%; }}
+      </style>
+    </head>
+    <body>
+      {html_body}
+    </body>
+    </html>
+    """
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = Header(f"📊 全球市场温度与均线支撑复盘 ({today_str})", "utf-8")
+    msg["From"] = sender
+    msg["To"] = ", ".join(receivers)
+
+    # 同时附带纯文本与 HTML 版本，兼容所有邮件客户端
+    msg.attach(MIMEText(report_md, "plain", "utf-8"))
+    msg.attach(MIMEText(styled_html, "html", "utf-8"))
+
+    try:
+        print(f"正在通过 {smtp_host}:{smtp_port} 发送邮件至 {receivers} ...")
+        with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=20) as server:
+            server.login(sender, password)
+            server.sendmail(sender, receivers, msg.as_string())
+        print("✅ 投研日报邮件发送成功！")
+    except Exception as e:
+        print(f"❌ 邮件发送失败: {e}")
+
 def push_notifications(report_md: str):
     today_str = datetime.date.today().strftime("%Y-%m-%d")
+    
+    # 1. 发送 HTML 富文本邮件
+    send_email_report(report_md, today_str)
+
+    # 2. Telegram 推送（若已配置）
     tg_token = os.environ.get("TG_BOT_TOKEN", "").strip()
     tg_chat_id = os.environ.get("TG_CHAT_ID", "").strip()
     if tg_token and tg_chat_id:
@@ -494,6 +573,7 @@ def push_notifications(report_md: str):
         for i in range(0, len(report_md), 3800):
             requests.post(url, json={"chat_id": tg_chat_id, "text": report_md[i:i+3800]})
 
+    # 3. PushPlus 推送（若已配置）
     pushplus_token = os.environ.get("PUSHPLUS_TOKEN", "").strip()
     if pushplus_token:
         requests.post(
