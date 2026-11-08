@@ -2,7 +2,7 @@ name: Daily Market Intelligence Agent
 
 on:
   schedule:
-    - cron: "30 21 * * 1-5"
+    - cron: '30 21 * * 1-5'
   workflow_dispatch:
 
 env:
@@ -12,7 +12,7 @@ jobs:
   run-market-agent:
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write   # 关键：允许 Action 将每天新增的坐标点写回仓库
       issues: write
 
     steps:
@@ -22,8 +22,8 @@ jobs:
       - name: 2. 配置 Python 3.11 环境
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-          cache: "pip"
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: 3. 安装依赖库
         run: pip install -r requirements.txt
@@ -35,3 +35,13 @@ jobs:
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
         run: python main.py
+
+      - name: 5. 增量保存今日新增的数据坐标点 (market_history.json)
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          if [ -f market_history.json ]; then
+            git add market_history.json
+            git diff --staged --quiet || git commit -m "chore(data): append daily market data point [skip ci]"
+            git push
+          fi
